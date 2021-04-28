@@ -33,13 +33,11 @@ objects:
   metadata:
     name: guestbook
     namespace: ${OPERATOR_NAMESPACE}
-    finalizers:
-    - resources-finalizer.argocd.argoproj.io
   spec:
     destination:
       namespace: ${OPERATOR_NAMESPACE}
       server: 'https://kubernetes.default.svc'
-    project: ${OPERATOR_NAMESPACE}
+    project: default
     source:
       path: guestbook
       targetRevision: HEAD
