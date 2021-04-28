@@ -1,0 +1,233 @@
+= ArgoCD Operator Openshift 4
+Héctor Esteban Cabezos <hesteban@redhat.com>
+v1.0, 2020-11
+// Create TOC wherever needed
+:toc: macro
+:sectanchors:
+:sectnumlevels: 2
+:sectnums: 
+:source-highlighter: pygments
+:imagesdir: images
+// Start: Enable admonition icons
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+ifndef::env-github[]
+:icons: font
+endif::[]
+// End: Enable admonition icons
+
+This repository continues the demonstration done https://github.com/hect1995/h2o-ocp[here] about basic features and lifecycle of __operators__. More concretelly, the https://argocd-operator.readthedocs.io/en/latest/[ArgoCD]. Making use of the operator a Grafana instance will be deployed to plot specific metrics of ArgoCD. Moreover, it is showed how to use the Monitoring stack from OCP4 to send alerts.
+ Finally it will be explained how to delete the project. 
+
+// Create the Table of contents here
+toc::[]
+
+== Launch ArgoCD
+
+=== Setup
+
+The first step is to define the `OperatorGroup`, which selects target namespaces in which to generate required RBAC access for its member Operators, and a `Subscription` to subscribe a namespace to an Operator. +
+The list of Operators available to the cluster from the OperatorHub can be found by:
+[source, bash]
+----
+$ oc get packagemanifests -n openshift-marketplace
+NAME                                                 CATALOG               AGE
+fuse-console                                         Red Hat Operators     20h
+percona-xtradb-cluster-operator-certified-rhmp       Red Hat Marketplace   20h
+neuvector-community-operator                         Community Operators   20h
+federatorai-certified                                Certified Operators   20h
+apicast-operator                                     Red Hat Operators     20h
+atlasmap-operator                                    Community Operators   20h
+aws-event-sources-operator-certified                 Certified Operators   20h
+aws-efs-operator                                     Community Operators   20h
+k10-kasten-operator                                  Certified Operators   20h
+...
+
+$ oc get packagemanifests -n openshift-marketplace | grep argocd
+argocd-operator-helm                                 Community Operators   37h
+argocd-operator                                      Community Operators   37h
+
+----
+The second option is chosen. +
+
+Before installing the operator we need to check what are the `Install Modes` available and the `CRDs` that will be generated: 
+
+[source, bash]
+----
+$ oc describe packagemanifests argocd-operator -n openshift-marketplace
+Name:         argocd-operator
+Namespace:    openshift-marketplace
+Labels:       catalog=community-operators
+
+...
+Status:
+  Catalog Source:               community-operators
+  Catalog Source Display Name:  Community Operators
+  Catalog Source Namespace:     openshift-marketplace
+  Catalog Source Publisher:     Red Hat
+  Channels:
+    Current CSV:  argocd-operator.v0.0.14
+    Current CSV Desc:
+      Annotations:
+      ...
+      Apiservicedefinitions:
+      Customresourcedefinitions:
+        Owned:
+          Description:   An Application is a group of Kubernetes resources as defined by a manifest.
+          Display Name:  Application
+          Kind:          Application
+          Name:          applications.argoproj.io
+          Version:       v1alpha1
+          Description:   An AppProject is a logical grouping of Argo CD Applications.
+          Display Name:  AppProject
+          Kind:          AppProject
+          Name:          appprojects.argoproj.io
+          Version:       v1alpha1
+          Description:   ArgoCDExport describes the desired state for the export of a given Argo CD cluster.
+          Display Name:  ArgoCDExport
+          Kind:          ArgoCDExport
+          Name:          argocdexports.argoproj.io
+          Version:       v1alpha1
+          Description:   ArgoCD is the representation of an Argo CD deployment.
+          Display Name:  ArgoCD
+          Kind:          ArgoCD
+          Name:          argocds.argoproj.io
+          Version:       v1alpha1
+      ...
+
+      Display Name:  Argo CD
+      Install Modes:
+        Supported:  true
+        Type:       OwnNamespace
+        Supported:  true
+        Type:       SingleNamespace
+        Supported:  false
+        Type:       MultiNamespace
+        Supported:  false
+        Type:       AllNamespaces
+      ...             
+----
+
+An Operator is considered a member of an OperatorGroup if the following conditions are true:
+
+* The Operator’s CSV exists in the same namespace as the OperatorGroup.
+
+* The Operator’s CSV’s InstallModes support the set of namespaces targeted by the OperatorGroup.
+
+In this case the `OperatorGroup` needs to be configured to target its own namespace.
+
+=== Deploy the operator
+
+The `deploy-setup.yaml` template creates the `OperatorGroup` to its own namespace and subscribes to the `argocd-operator` and `prometheus-operator`. The latter is required later on  for Grafana.
+
+[source, bash]
+----
+OPERATOR_NAMESPACE=argocd-operator # Define the namespace
+$ oc process -f templates/deploy-setup.yaml -p OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} | oc apply -f -
+----
+
+At this point, OLM is now aware of the selected Operator. A cluster service version (CSV) for the Operator should appear in the target namespace, and APIs provided by the Operator should be available for creation.
+Let's check it:
+
+[source, bash]
+----
+$ oc get crd -n ${OPERATOR_NAMESPACE}| grep "argo"
+applications.argoproj.io                                          2021-04-27T07:12:22Z
+applicationsets.argoproj.io                                       2021-04-28T07:51:44Z
+appprojects.argoproj.io                                           2021-04-27T07:12:22Z
+argocdexports.argoproj.io                                         2021-04-27T08:19:30Z
+argocds.argoproj.io                                               2021-04-27T08:19:30Z
+----
+
+=== Deploy and expose an ArgoCD instance
+
+Now, two CRs of kind `ArgoCD` and `Application` can be deployed into the namespace:
+
+[source, bash]
+----
+$ oc process -f templates/deploy-app.yaml -p OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} | oc apply -f -
+----
+
+The `ArgoCD` CR will first create an ArgoCD cluster, then generates instances for Prometheus, Grafana and creates the route to access the Grafana dashboards.
+
+[source, bash]
+----
+- apiVersion: argoproj.io/v1alpha1
+  kind: ArgoCD
+  metadata:
+    name: example-argocd
+    labels:
+      example: insights
+  spec:
+    grafana:
+      enabled: true
+      route:
+        enabled: true
+    ingress:
+      enabled: true
+    prometheus:
+      enabled: true
+    server:
+      service:
+        type: LoadBalancer
+      route:
+        enabled: true
+      insecure: true
+----
+
+Finally, an application is deployed into ArgoCD cluster through the `Application` CR, which imports an application from a remote git repository.
+
+By executing `oc get routes` we can copy the route create it and access the GUI of Grafana in our desired navigation explorer.
+
+=== References
+
+- https://docs.openshift.com/container-platform/4.1/applications/operators/olm-understanding-olm.html#olm-operatorgroups-membership_olm-understanding-olm
+- https://argocd-operator.readthedocs.io/en/latest/
+
+== Monitoring
+A typical OpenShift monitoring stack includes Prometheus for monitoring both systems and services, and Grafana for analyzing and visualizing metrics.
+
+Administrators are often looking to write custom queries and create custom dashboards in Grafana. However, Grafana instances provided with the monitoring stack (and its dashboards) are read-only. To solve this problem, we can use the community-powered Grafana operator provided by OperatorHub, which is launched by the `ÀrgoCD` CR. +
+It allows to create your own dashboards but in this article I will just present the default __ArgoCD__ dashboard.
+
+image::grafana_argocd.png[]
+
+=== References
+
+- https://github.com/alvarolop/rhdg8-server
+
+== Alert Manager
+
+The Alertmanager manages incoming alerts; this includes silencing, inhibition, aggregation, and sending out notifications through methods such as email, PagerDuty, and HipChat. 
+
+An implementation example through `email` is given in [templates/alertmanager/alertmanager.yaml](templates/alertmanager/alertmanager.yaml), with some missing data that needs to be adapted by you.
+
+NOTE: You need to create an [App Password](https://support.google.com/accounts/answer/185833?hl=en). To do that, go to **Account Settings -> Security -> Signing in to Google -> App password** (if you don’t see App password as an option, you probably haven’t set up 2-Step Verification and will need to do that first). Copy the newly-created password.
+
+The Alertmanager configuration can be updated replacing the content of the alertmanager-main `Secret`.
+
+[source, bash]
+----
+$ oc create secret generic alertmanager-main \
+    --from-file=templates/alertmanager/alertmanager.yml \
+        --dry-run -o=yaml -n openshift-monitoring |\
+            oc replace secret --filename=- -n openshift-monitoring
+----
+
+Moreover, We can configure the Alertmanager through the Openshift 4 platform, in **Administration -> Cluster Settings -> Global configuration -> Alertmanager**
+
+image::ocp_alertmanager_gui.png[]
+
+If everything works as expected the receiver should receive notifications like the following one:
+
+image::alert_manager_notification.png[]
+
+=== References
+
+- https://github.com/samuelvl/ocp4-upi-baremetal-lab/tree/master/day-two/04-monitoring#alertmanager
+- https://grafana.com/blog/2020/02/25/step-by-step-guide-to-setting-up-prometheus-alertmanager-with-slack-pagerduty-and-gmail/

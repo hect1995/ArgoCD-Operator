@@ -18,6 +18,8 @@ objects:
   spec:
     grafana:
       enabled: true
+      route:
+        enabled: true
     ingress:
       enabled: true
     prometheus:
