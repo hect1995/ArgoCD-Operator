@@ -206,7 +206,15 @@ image::argocd-app.png[]
 A typical OpenShift monitoring stack includes Prometheus for monitoring both systems and services, and Grafana for analyzing and visualizing metrics.
 
 Administrators are often looking to write custom queries and create custom dashboards in Grafana. However, Grafana instances provided with the monitoring stack (and its dashboards) are read-only. To solve this problem, we can use the community-powered Grafana operator provided by OperatorHub, which is launched by the `ÀrgoCD` CR. +
+In order to access Grafana we need to extract the password from the secret `example-argocd-cluster`:
+
+[source, bash]
+----
+$ kubectl -n argocd get secret example-argocd-cluster -o jsonpath='{.data.admin\.password}' | base64 -d
+----
+
 It allows to create your own dashboards but in this article I will just present the default __ArgoCD__ dashboard.
+
 
 image::grafana_argocd.png[]
 
