@@ -21,8 +21,7 @@ ifndef::env-github[]
 endif::[]
 // End: Enable admonition icons
 
-This repository continues the demonstration done https://github.com/hect1995/h2o-ocp[here] about basic features and lifecycle of __operators__. More concretelly, the https://argocd-operator.readthedocs.io/en/latest/[ArgoCD]. Making use of the operator a Grafana instance will be deployed to plot specific metrics of ArgoCD. Moreover, it is showed how to use the Monitoring stack from OCP4 to send alerts.
- Finally it will be explained how to delete the project. 
+This repository continues the demonstration done https://github.com/hect1995/h2o-ocp[here] about basic features and lifecycle of __operators__. More concretelly, the https://argocd-operator.readthedocs.io/en/latest/[ArgoCD operator]. Making use of the operator, a Grafana instance will be deployed to plot specific metrics of ArgoCD. Moreover, it is showed how to use the Monitoring stack from OCP4 to send alerts.
 
 // Create the Table of contents here
 toc::[]
