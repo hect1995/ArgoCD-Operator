@@ -182,7 +182,18 @@ The `ArgoCD` CR will first create an ArgoCD cluster, then generates instances fo
 
 Finally, an application is deployed into ArgoCD cluster through the `Application` CR, which imports an application from a remote git repository.
 
-By executing `oc get routes` we can copy the route create it and access the GUI of Grafana in our desired navigation explorer.
+By executing `oc get routes` we can copy the routes created and access the ArgoCD server, the Grafana dashboards or the application.
+
+[source, bash]
+----
+$ oc get routes
+NAME                     HOST/PORT                                                      PATH   SERVICES                 PORT       TERMINATION     WILDCARD
+example-argocd-grafana   example-argocd-grafana-argocd.apps.apps.sandbox9.opentlc.com          example-argocd-grafana   http                       None
+example-argocd-server    example-argocd-server-argocd.apps.apps.sandbox9.opentlc.com           example-argocd-server    http       edge/Redirect   None
+spring-petclinic         spring-petclinic-argocd.apps.apps.sandbox9.opentlc.com                spring-petclinic         8080-tcp                   None
+----
+
+image::web_ui.png[]
 
 === References
 
@@ -196,6 +207,9 @@ Administrators are often looking to write custom queries and create custom dashb
 It allows to create your own dashboards but in this article I will just present the default __ArgoCD__ dashboard.
 
 image::grafana_argocd.png[]
+
+image::argocd-app.png[]
+
 
 === References
 
