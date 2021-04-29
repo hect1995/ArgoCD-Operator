@@ -33,7 +33,7 @@ objects:
 - apiVersion: argoproj.io/v1alpha1
   kind: Application
   metadata:
-    name: guestbook
+    name: ${APPLICATION_NAME}
     namespace: ${OPERATOR_NAMESPACE}
   spec:
     destination:
@@ -41,12 +41,18 @@ objects:
       server: 'https://kubernetes.default.svc'
     project: default
     source:
-      path: guestbook
+      path: 'app'
       targetRevision: HEAD
-      repoURL: 'https://github.com/argoproj/argocd-example-apps.git'
+      repoURL: 'https://github.com/siamaksade/openshift-gitops-getting-started'
     syncPolicy:
-      automated: {}
+      automated: 
+        prune: true
+        selfHeal: true
 parameters:
+- name: APPLICATION_NAME
+  description: "The name of the application to deploy."
+  required: false
+  value: "app"
 - name: OPERATOR_NAMESPACE
   description: "The project where the operator will be installed."
   required: false
