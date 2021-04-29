@@ -195,6 +195,8 @@ spring-petclinic         spring-petclinic-argocd.apps.apps.sandbox9.opentlc.com 
 
 image::web_ui.png[]
 
+image::argocd-app.png[]
+
 === References
 
 - https://docs.openshift.com/container-platform/4.1/applications/operators/olm-understanding-olm.html#olm-operatorgroups-membership_olm-understanding-olm
@@ -207,9 +209,6 @@ Administrators are often looking to write custom queries and create custom dashb
 It allows to create your own dashboards but in this article I will just present the default __ArgoCD__ dashboard.
 
 image::grafana_argocd.png[]
-
-image::argocd-app.png[]
-
 
 === References
 
