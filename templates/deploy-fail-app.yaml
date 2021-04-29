@@ -1,35 +1,14 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: Deploy app ArgoCD
+  name: Deploy a FAILING app in ArgoCD
   annotations:
-    description: Template to deploy ArgoCD app
+    description: Template to deploy ArgoCD app that FAILS
     tags: argocd,community,operator
     iconClass: icon-cassandra
     openshift.io/provider-display-name: Red Hat, Inc.
     openshift.io/support-url: https://access.redhat.com
 objects:
-- apiVersion: argoproj.io/v1alpha1
-  kind: ArgoCD
-  metadata:
-    name: example-argocd
-    labels:
-      example: insights
-  spec:
-    grafana:
-      enabled: true
-      route:
-        enabled: true
-    ingress:
-      enabled: true
-    prometheus:
-      enabled: true
-    server:
-      service:
-        type: LoadBalancer
-      route:
-        enabled: true
-      insecure: true
 - apiVersion: argoproj.io/v1alpha1
   kind: Application
   metadata:
@@ -41,20 +20,19 @@ objects:
       server: 'https://kubernetes.default.svc'
     project: default
     source:
-      path: 'app'
+      path: 'guestbook'
       targetRevision: HEAD
-      repoURL: 'https://github.com/siamaksade/openshift-gitops-getting-started'
+      repoURL: 'https://github.com/kubernetes/examples'
     syncPolicy:
       automated: 
         prune: true
         selfHeal: true
 parameters:
 - name: APPLICATION_NAME
-  description: "The name of the application to deploy."
+  description: "The name of the application to deploy, which fails."
   required: false
-  value: "app"
+  value: "app-fail"
 - name: OPERATOR_NAMESPACE
   description: "The project where the operator will be installed."
   required: false
   value: "argocd"
-
